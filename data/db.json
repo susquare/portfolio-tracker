@@ -1,0 +1,106 @@
+{
+  "projects": [
+    {
+      "id": "141098e5-6ab7-491f-a715-a9676bb12c7f",
+      "createdAt": "2025-12-07T19:18:36.911Z",
+      "milestones": [],
+      "statusUpdates": [],
+      "status": "active",
+      "name": "project 1",
+      "description": "project one",
+      "deliverables": "",
+      "dueDate": "2025-12-19",
+      "priority": "medium",
+      "size": "m",
+      "teamId": "team-a",
+      "color": "#ec4899"
+    },
+    {
+      "id": "1f0a5c40-6b8a-42a5-ba88-60d337c9e05c",
+      "createdAt": "2025-12-07T19:20:31.644Z",
+      "milestones": [],
+      "statusUpdates": [],
+      "status": "active",
+      "name": "project 2",
+      "description": "project two",
+      "deliverables": "1. SOP",
+      "dueDate": "2025-12-12",
+      "priority": "high",
+      "size": "m",
+      "teamId": "team-b",
+      "color": "#22c55e"
+    },
+    {
+      "id": "8e1b68ed-e1f0-45d9-aefc-850c8d17b74a",
+      "createdAt": "2025-12-07T19:21:02.100Z",
+      "milestones": [],
+      "statusUpdates": [],
+      "status": "active",
+      "name": "project 3",
+      "description": "project three",
+      "deliverables": "1. UI/UX",
+      "dueDate": "2025-12-26",
+      "priority": "medium",
+      "size": "m",
+      "teamId": "team-c",
+      "color": "#3b82f6"
+    }
+  ],
+  "teams": [
+    {
+      "id": "team-a",
+      "name": "Team A",
+      "color": "#6366f1",
+      "icon": "🅰️"
+    },
+    {
+      "id": "team-b",
+      "name": "Team B",
+      "color": "#22c55e",
+      "icon": "🅱️"
+    },
+    {
+      "id": "team-c",
+      "name": "Team C",
+      "color": "#f59e0b",
+      "icon": "©️"
+    }
+  ],
+  "teamMembers": [
+    {
+      "id": "1",
+      "name": "Alex Chen",
+      "avatar": "🧑‍💻",
+      "role": "Developer",
+      "teamId": "team-a"
+    },
+    {
+      "id": "2",
+      "name": "Sarah Kim",
+      "avatar": "👩‍🎨",
+      "role": "Designer",
+      "teamId": "team-a"
+    },
+    {
+      "id": "3",
+      "name": "Mike Johnson",
+      "avatar": "👨‍💼",
+      "role": "Project Manager",
+      "teamId": "team-b"
+    },
+    {
+      "id": "4",
+      "name": "Emily Davis",
+      "avatar": "👩‍🔬",
+      "role": "QA Engineer",
+      "teamId": "team-b"
+    },
+    {
+      "id": "5",
+      "name": "Chris Wilson",
+      "avatar": "🧑‍🔧",
+      "role": "DevOps",
+      "teamId": "team-c"
+    }
+  ]
+}
