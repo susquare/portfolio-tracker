@@ -71,9 +71,25 @@ export const handler = async (event) => {
     return json(500, { error: 'Missing S3_BUCKET env var' });
   }
 
-  const path = event.path || '';
-  const method = event.httpMethod;
-  const segments = path.replace(/^\/+|\/+$/g, '').split('/');
+  // Normalize path from multiple possible locations (HTTP API / REST / test console)
+  const pathFromRouteKey = event.routeKey ? event.routeKey.split(' ').slice(1).join(' ') : '';
+  const rawPath =
+    event.rawPath ||
+    event.path ||
+    event?.requestContext?.http?.path ||
+    pathFromRouteKey ||
+    '/';
+  const method =
+    event.httpMethod ||
+    event?.requestContext?.http?.method ||
+    event?.requestContext?.httpMethod ||
+    '';
+  let segments = rawPath.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+  // Prefer explicit /api, but fall back to no-prefix paths
+  const apiIndex = segments.indexOf('api');
+  if (apiIndex >= 0) {
+    segments = segments.slice(apiIndex + 1); // remove the 'api' segment itself
+  }
 
   let body = {};
   if (event.body) {
@@ -85,21 +101,19 @@ export const handler = async (event) => {
   }
 
   try {
-    // Routes start with /api
-    if (segments[0] !== 'api') {
-      return json(404, { error: 'Not found' });
-    }
-
-    // GET /api/state
-    if (segments.length === 2 && segments[1] === 'state' && method === 'GET') {
+    // GET /api/state or /state (fallback: last segment == state)
+    if (method === 'GET' && segments.length && segments[segments.length - 1] === 'state') {
       const db = await readDB();
       return json(200, db);
     }
 
-    // /api/projects
-    if (segments[1] === 'projects') {
-      // POST /api/projects
-      if (segments.length === 2 && method === 'POST') {
+    // Locate "projects" segment anywhere
+    const projIdx = segments.indexOf('projects');
+    if (projIdx !== -1) {
+      const afterProjects = segments.slice(projIdx + 1);
+
+      // POST /projects
+      if (afterProjects.length === 0 && method === 'POST') {
         const db = await readDB();
         const project = {
           id: randomUUID(),
@@ -115,7 +129,7 @@ export const handler = async (event) => {
       }
 
       // With project id
-      const projectId = segments[2];
+      const projectId = afterProjects[0];
       const db = await readDB();
       const project = findProject(db, projectId);
       if (!project) {
@@ -123,23 +137,23 @@ export const handler = async (event) => {
       }
 
       // PATCH /api/projects/:id
-      if (segments.length === 3 && method === 'PATCH') {
+      if (afterProjects.length === 1 && method === 'PATCH') {
         Object.assign(project, body);
         await writeDB(db);
         return json(200, project);
       }
 
       // DELETE /api/projects/:id
-      if (segments.length === 3 && method === 'DELETE') {
+      if (afterProjects.length === 1 && method === 'DELETE') {
         db.projects = db.projects.filter(p => p.id !== projectId);
         await writeDB(db);
         return json(204, {});
       }
 
       // Milestones
-      if (segments[3] === 'milestones') {
+      if (afterProjects[1] === 'milestones') {
         // POST /api/projects/:id/milestones
-        if (segments.length === 4 && method === 'POST') {
+        if (afterProjects.length === 2 && method === 'POST') {
           const milestone = {
             id: randomUUID(),
             createdAt: new Date().toISOString(),
@@ -152,10 +166,10 @@ export const handler = async (event) => {
           return json(201, project);
         }
 
-        const milestoneId = segments[4];
+        const milestoneId = afterProjects[2];
 
         // PATCH /api/projects/:id/milestones/:mid
-        if (segments.length === 5 && method === 'PATCH') {
+        if (afterProjects.length === 3 && method === 'PATCH') {
           project.milestones = project.milestones || [];
           const m = project.milestones.find(x => x.id === milestoneId);
           if (!m) return json(404, { error: 'Milestone not found' });
@@ -165,7 +179,7 @@ export const handler = async (event) => {
         }
 
         // DELETE /api/projects/:id/milestones/:mid
-        if (segments.length === 5 && method === 'DELETE') {
+        if (afterProjects.length === 3 && method === 'DELETE') {
           project.milestones = project.milestones || [];
           const before = project.milestones.length;
           project.milestones = project.milestones.filter(x => x.id !== milestoneId);
@@ -176,9 +190,9 @@ export const handler = async (event) => {
       }
 
       // Status updates
-      if (segments[3] === 'status-updates') {
+      if (afterProjects[1] === 'status-updates') {
         // POST /api/projects/:id/status-updates
-        if (segments.length === 4 && method === 'POST') {
+        if (afterProjects.length === 2 && method === 'POST') {
           const update = {
             id: randomUUID(),
             createdAt: new Date().toISOString(),
@@ -190,9 +204,9 @@ export const handler = async (event) => {
           return json(201, project);
         }
 
-        const updateId = segments[4];
+        const updateId = afterProjects[2];
         // DELETE /api/projects/:id/status-updates/:uid
-        if (segments.length === 5 && method === 'DELETE') {
+        if (afterProjects.length === 3 && method === 'DELETE') {
           project.statusUpdates = project.statusUpdates || [];
           const before = project.statusUpdates.length;
           project.statusUpdates = project.statusUpdates.filter(u => u.id !== updateId);

@@ -3,7 +3,17 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 const ProjectContext = createContext(null);
 const ProjectDispatchContext = createContext(null);
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:4000/api' : '');
+
+if (!API_BASE) {
+  // Fail fast in production if the API base is missing
+  throw new Error('VITE_API_URL is not set. Please configure it in the environment.');
+}
+
+// Log once at module init (helpful to verify in browser console)
+console.info('ProjectFlow API base:', API_BASE);
 
 const initialState = {
   loading: true,
