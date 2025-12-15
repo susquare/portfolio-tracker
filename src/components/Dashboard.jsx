@@ -17,8 +17,9 @@ export default function Dashboard({ onNavigate }) {
   
   // Calculate metrics
   const totalProjects = projects.length;
-  const activeProjects = projects.filter(p => p.status === 'active').length;
-  const completedProjects = projects.filter(p => p.status === 'completed').length;
+  const approvedProjects = projects.filter(p => p.portfolioIntake === 'approved').length;
+  const inReviewProjects = projects.filter(p => p.portfolioIntake === 'in-review').length;
+  const newProjects = projects.filter(p => p.portfolioIntake === 'new').length;
   
   const allMilestones = projects.flatMap(p => p.milestones || []);
   const totalMilestones = allMilestones.length;
@@ -45,15 +46,170 @@ export default function Dashboard({ onNavigate }) {
     ? Math.round((completedMilestones / totalMilestones) * 100) 
     : 0;
   
-  // Team workload
+  // Calculate task metrics - planned vs actual (only tasks with planned end dates)
+  const tasksWithPlannedDates = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  projects.forEach(project => {
+    (project.milestones || []).forEach(milestone => {
+      (milestone.tasks || []).forEach(task => {
+        // Only include tasks that have a planned end date
+        if (task.endDate) {
+          const plannedDate = parseISO(task.endDate);
+          plannedDate.setHours(0, 0, 0, 0);
+          
+          let actualDate = null;
+          let status = 'on-time';
+          let daysDifference = 0;
+          
+          if (task.status === 'completed') {
+            // If completed, check if there's a completion date
+            // For now, we'll use today as the completion date if not specified
+            // In a real app, you'd want to track completedAt when status changes to completed
+            actualDate = task.completedAt ? parseISO(task.completedAt) : today;
+            actualDate.setHours(0, 0, 0, 0);
+            daysDifference = differenceInDays(actualDate, plannedDate);
+            status = daysDifference > 0 ? 'late' : daysDifference < 0 ? 'early' : 'on-time';
+          } else if (task.status === 'in-progress' || task.status === 'pending') {
+            // If in progress or pending, compare today with planned date
+            actualDate = today;
+            daysDifference = differenceInDays(today, plannedDate);
+            status = daysDifference > 0 ? 'overdue' : 'on-time';
+          }
+          
+          tasksWithPlannedDates.push({
+            ...task,
+            projectId: project.id,
+            projectName: project.name,
+            milestoneId: milestone.id,
+            milestoneTitle: milestone.title,
+            plannedDate,
+            actualDate,
+            scheduleStatus: status, // 'overdue', 'late', 'on-time', 'early'
+            daysDifference: Math.abs(daysDifference)
+          });
+        }
+      });
+    });
+  });
+  
+  // Sort by days difference (most overdue first)
+  tasksWithPlannedDates.sort((a, b) => {
+    if (a.status === 'overdue' && b.status !== 'overdue') return -1;
+    if (b.status === 'overdue' && a.status !== 'overdue') return 1;
+    return b.daysDifference - a.daysDifference;
+  });
+  
+  const overdueTasks = tasksWithPlannedDates.filter(t => t.scheduleStatus === 'overdue');
+  const lateTasks = tasksWithPlannedDates.filter(t => t.scheduleStatus === 'late');
+  const onTimeTasks = tasksWithPlannedDates.filter(t => t.scheduleStatus === 'on-time');
+  const earlyTasks = tasksWithPlannedDates.filter(t => t.scheduleStatus === 'early');
+  
+  const totalOffSchedule = overdueTasks.length + lateTasks.length;
+  
+  // Team workload - count both milestones and tasks
   const assigneeWorkload = {};
+  
+  // Count milestones assigned to team members
   allMilestones.forEach(m => {
     if (m.assigneeId && m.status !== 'completed') {
       assigneeWorkload[m.assigneeId] = (assigneeWorkload[m.assigneeId] || 0) + 1;
     }
   });
   
+  // Count tasks assigned to team members
+  projects.forEach(project => {
+    (project.milestones || []).forEach(milestone => {
+      (milestone.tasks || []).forEach(task => {
+        if (task.assigneeId && task.status !== 'completed') {
+          assigneeWorkload[task.assigneeId] = (assigneeWorkload[task.assigneeId] || 0) + 1;
+        }
+      });
+    });
+  });
+  
+  // Calculate projects at risk (projects with overdue tasks or milestones)
+  const projectsAtRisk = projects
+    .map(project => {
+      let overdueMilestonesCount = 0;
+      let overdueTasksCount = 0;
+      let riskReasons = [];
+      
+      // Check for overdue milestones
+      (project.milestones || []).forEach(milestone => {
+        if (milestone.dueDate && milestone.status !== 'completed') {
+          const dueDate = parseISO(milestone.dueDate);
+          if (isBefore(dueDate, today)) {
+            overdueMilestonesCount++;
+            riskReasons.push(`Milestone: ${milestone.title}`);
+          }
+        }
+        
+        // Check for overdue tasks
+        (milestone.tasks || []).forEach(task => {
+          if (task.endDate && task.status !== 'completed') {
+            const endDate = parseISO(task.endDate);
+            if (isBefore(endDate, today)) {
+              overdueTasksCount++;
+              riskReasons.push(`Task: ${task.title}`);
+            }
+          }
+        });
+      });
+      
+      return {
+        ...project,
+        overdueMilestonesCount,
+        overdueTasksCount,
+        totalOverdue: overdueMilestonesCount + overdueTasksCount,
+        riskReasons: riskReasons.slice(0, 3) // Limit to first 3 reasons
+      };
+    })
+    .filter(project => project.totalOverdue > 0)
+    .sort((a, b) => b.totalOverdue - a.totalOverdue);
+  
+  // Calculate RAG status for projects
+  const calculateRAGStatus = (project) => {
+    let hasOverdue = false;
+    let hasApproaching = false;
+    
+    // Check milestones
+    (project.milestones || []).forEach(milestone => {
+      if (milestone.dueDate && milestone.status !== 'completed') {
+        const dueDate = parseISO(milestone.dueDate);
+        const daysUntil = differenceInDays(dueDate, today);
+        if (daysUntil < 0) {
+          hasOverdue = true;
+        } else if (daysUntil <= 7) {
+          hasApproaching = true;
+        }
+      }
+      
+      // Check tasks
+      (milestone.tasks || []).forEach(task => {
+        if (task.endDate && task.status !== 'completed') {
+          const endDate = parseISO(task.endDate);
+          const daysUntil = differenceInDays(endDate, today);
+          if (daysUntil < 0) {
+            hasOverdue = true;
+          } else if (daysUntil <= 7) {
+            hasApproaching = true;
+          }
+        }
+      });
+    });
+    
+    if (hasOverdue) return 'red';
+    if (hasApproaching) return 'amber';
+    return 'green';
+  };
+  
   const recentProjects = [...projects]
+    .map(project => ({
+      ...project,
+      ragStatus: calculateRAGStatus(project)
+    }))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
 
@@ -76,20 +232,24 @@ export default function Dashboard({ onNavigate }) {
             <span className="metric-label">Total Projects</span>
           </div>
           <div className="metric-badge">
-            <span className="badge active">{activeProjects} active</span>
+            <span className="badge active">{approvedProjects} approved</span>
           </div>
         </div>
         
         <div className="metric-card">
-          <div className="metric-icon milestones">
-            <Target size={24} />
+          <div className="metric-icon risk">
+            <AlertTriangle size={24} />
           </div>
           <div className="metric-content">
-            <span className="metric-value">{totalMilestones}</span>
-            <span className="metric-label">Total Milestones</span>
+            <span className="metric-value">{projectsAtRisk.length}</span>
+            <span className="metric-label">Projects at Risk</span>
           </div>
           <div className="metric-badge">
-            <span className="badge success">{completedMilestones} done</span>
+            {projectsAtRisk.length > 0 ? (
+              <span className="badge danger">{projectsAtRisk.length} need attention</span>
+            ) : (
+              <span className="badge success">All on track</span>
+            )}
           </div>
         </div>
         
@@ -125,27 +285,157 @@ export default function Dashboard({ onNavigate }) {
       </div>
       
       <div className="dashboard-grid">
-        <div className="dashboard-card milestone-status">
-          <h3>Milestone Status</h3>
-          <div className="status-chart">
-            <div className="chart-bars">
-              <div className="chart-bar">
-                <div className="bar-fill completed" style={{ height: `${totalMilestones ? (completedMilestones / totalMilestones) * 100 : 0}%` }}></div>
-                <span className="bar-label">Completed</span>
-                <span className="bar-value">{completedMilestones}</span>
+        <div className="dashboard-card task-planned-vs-actual">
+          <h3>Tasks: Planned vs Actual</h3>
+          {tasksWithPlannedDates.length === 0 ? (
+            <div className="empty-state small">
+              <p>No tasks with planned dates yet</p>
+            </div>
+          ) : (
+            <div className="planned-vs-actual-list">
+              <div className="summary-stats">
+                <div className="summary-item overdue">
+                  <span className="summary-label">Overdue</span>
+                  <span className="summary-value">{overdueTasks.length}</span>
+                </div>
+                <div className="summary-item late">
+                  <span className="summary-label">Completed Late</span>
+                  <span className="summary-value">{lateTasks.length}</span>
+                </div>
+                <div className="summary-item on-time">
+                  <span className="summary-label">On Time</span>
+                  <span className="summary-value">{onTimeTasks.length}</span>
+                </div>
+                {earlyTasks.length > 0 && (
+                  <div className="summary-item early">
+                    <span className="summary-label">Early</span>
+                    <span className="summary-value">{earlyTasks.length}</span>
+                  </div>
+                )}
               </div>
-              <div className="chart-bar">
-                <div className="bar-fill in-progress" style={{ height: `${totalMilestones ? (inProgressMilestones / totalMilestones) * 100 : 0}%` }}></div>
-                <span className="bar-label">In Progress</span>
-                <span className="bar-value">{inProgressMilestones}</span>
-              </div>
-              <div className="chart-bar">
-                <div className="bar-fill pending" style={{ height: `${totalMilestones ? (pendingMilestones / totalMilestones) * 100 : 0}%` }}></div>
-                <span className="bar-label">Pending</span>
-                <span className="bar-value">{pendingMilestones}</span>
+              
+              <div className="tasks-list-container">
+                <h4 className="tasks-list-title">Tasks Not Completed as Planned</h4>
+                {totalOffSchedule === 0 ? (
+                  <div className="empty-state small">
+                    <p>All tasks are on schedule! 🎉</p>
+                  </div>
+                ) : (
+                  <ul className="planned-vs-actual-tasks">
+                    {[...overdueTasks, ...lateTasks].slice(0, 10).map(task => {
+                      const assignee = teamMembers.find(m => m.id === task.assigneeId);
+                      return (
+                        <li 
+                          key={`${task.projectId}-${task.milestoneId}-${task.id}`}
+                          className={`task-item ${task.scheduleStatus}`}
+                          onClick={() => onNavigate('project', task.projectId)}
+                        >
+                          <div className="task-item-header">
+                            <span className="task-title">{task.title}</span>
+                            <span className={`status-badge ${task.scheduleStatus}`}>
+                              {task.scheduleStatus === 'overdue' ? 'Overdue' : 'Late'}
+                            </span>
+                          </div>
+                          <div className="task-item-meta">
+                            <span className="task-project">{task.projectName}</span>
+                            {assignee && (
+                              <span className="task-assignee">{assignee.avatar} {assignee.name}</span>
+                            )}
+                          </div>
+                          <div className="task-dates-comparison">
+                            <div className="date-item planned">
+                              <span className="date-label">Planned:</span>
+                              <span className="date-value">{format(task.plannedDate, 'MMM d, yyyy')}</span>
+                            </div>
+                            <div className="date-item actual">
+                              <span className="date-label">
+                                {task.status === 'completed' ? 'Completed:' : 'As of today:'}
+                              </span>
+                              <span className="date-value">
+                                {task.actualDate ? format(task.actualDate, 'MMM d, yyyy') : 'N/A'}
+                              </span>
+                            </div>
+                            {task.daysDifference > 0 && (
+                              <div className="days-difference">
+                                {task.daysDifference} day{task.daysDifference !== 1 ? 's' : ''} {task.scheduleStatus === 'overdue' ? 'overdue' : 'late'}
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
             </div>
-          </div>
+          )}
+        </div>
+        
+        <div className="dashboard-card projects-at-risk">
+          <h3>
+            <AlertTriangle size={18} />
+            Projects at Risk
+          </h3>
+          {projectsAtRisk.length === 0 ? (
+            <div className="empty-state small">
+              <p>No projects at risk. All projects are on track! 🎉</p>
+            </div>
+          ) : (
+            <ul className="projects-risk-list">
+              {projectsAtRisk.map(project => {
+                const projectTeam = teams.find(t => t.id === project.teamId);
+                return (
+                  <li 
+                    key={project.id} 
+                    className="risk-project-item"
+                    onClick={() => onNavigate('project', project.id)}
+                  >
+                    <div className="risk-project-header">
+                      <div className="risk-project-info">
+                        <div 
+                          className="project-color-indicator" 
+                          style={{ backgroundColor: project.color || '#6366f1' }}
+                        ></div>
+                        <div className="risk-project-details">
+                          <span className="risk-project-name">{project.name}</span>
+                          {projectTeam && (
+                            <span className="risk-project-team">{projectTeam.icon} {projectTeam.name}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="risk-badge">
+                        {project.totalOverdue} overdue
+                      </div>
+                    </div>
+                    <div className="risk-breakdown">
+                      {project.overdueMilestonesCount > 0 && (
+                        <span className="risk-item">
+                          {project.overdueMilestonesCount} milestone{project.overdueMilestonesCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {project.overdueTasksCount > 0 && (
+                        <span className="risk-item">
+                          {project.overdueTasksCount} task{project.overdueTasksCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                    {project.riskReasons.length > 0 && (
+                      <div className="risk-reasons">
+                        {project.riskReasons.map((reason, idx) => (
+                          <span key={idx} className="risk-reason-tag">{reason}</span>
+                        ))}
+                        {project.totalOverdue > 3 && (
+                          <span className="risk-reason-tag more">
+                            +{project.totalOverdue - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
         
         <div className="dashboard-card upcoming-milestones">
@@ -201,7 +491,7 @@ export default function Dashboard({ onNavigate }) {
                       className="workload-bar" 
                       style={{ width: `${(tasks / maxTasks) * 100}%` }}
                     ></div>
-                    <span className="task-count">{tasks} tasks</span>
+                    <span className="task-count">{tasks} {tasks === 1 ? 'assignment' : 'assignments'}</span>
                   </div>
                 </li>
               );
@@ -230,8 +520,15 @@ export default function Dashboard({ onNavigate }) {
                       {project.milestones?.length || 0} milestones
                     </span>
                   </div>
-                  <span className={`status-badge ${project.status}`}>
-                    {project.status}
+                  <span className={`rag-indicator rag-${project.ragStatus}`} title={
+                    project.ragStatus === 'red' ? 'At Risk' :
+                    project.ragStatus === 'amber' ? 'On Watch' :
+                    'On Track'
+                  }>
+                    <span className="rag-dot"></span>
+                    {project.ragStatus === 'red' ? 'Red' :
+                     project.ragStatus === 'amber' ? 'Amber' :
+                     'Green'}
                   </span>
                 </li>
               ))}

@@ -4,6 +4,7 @@ import { ThemeProvider } from './store/ThemeContext';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Portfolio from './components/Portfolio';
+import ProjectPipeline from './components/ProjectPipeline';
 import Projects from './components/Projects';
 import ProjectDetail from './components/ProjectDetail';
 import NewProjectModal from './components/NewProjectModal';
@@ -34,6 +35,8 @@ function AppContent() {
         return <Dashboard onNavigate={handleNavigate} />;
       case 'portfolio':
         return <Portfolio onNavigate={handleNavigate} />;
+      case 'pipeline':
+        return <ProjectPipeline onNavigate={handleNavigate} />;
       case 'projects':
         return (
           <Projects 

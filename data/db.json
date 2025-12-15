@@ -3,7 +3,97 @@
     {
       "id": "141098e5-6ab7-491f-a715-a9676bb12c7f",
       "createdAt": "2025-12-07T19:18:36.911Z",
-      "milestones": [],
+      "milestones": [
+        {
+          "id": "8feaf055-8aaa-4cea-b177-61ea2a7c2eb3",
+          "createdAt": "2025-12-14T05:31:01.455Z",
+          "status": "completed",
+          "title": "BRD",
+          "description": "",
+          "dueDate": "2025-12-19",
+          "priority": "medium",
+          "assigneeId": "2",
+          "completedAt": "2025-12-14T05:32:19.610Z",
+          "tasks": [
+            {
+              "id": "c06c590e-375e-4d5e-b351-f3a677d245cc",
+              "createdAt": "2025-12-14T05:36:35.427Z",
+              "status": "completed",
+              "title": "BRD",
+              "startDate": "2025-12-12",
+              "endDate": "2025-12-12",
+              "estimatedHours": "8",
+              "assigneeId": "2"
+            }
+          ]
+        },
+        {
+          "id": "ea889d6a-66fe-40d7-a242-16348f3e0345",
+          "createdAt": "2025-12-14T05:32:34.838Z",
+          "status": "in-progress",
+          "title": "Development",
+          "description": "",
+          "dueDate": "2025-12-19",
+          "priority": "medium",
+          "assigneeId": "1",
+          "tasks": [
+            {
+              "id": "b1d84eef-2328-49b0-b5de-df2811a6aada",
+              "createdAt": "2025-12-14T05:35:52.779Z",
+              "status": "completed",
+              "title": "Design",
+              "startDate": "2025-12-15",
+              "endDate": "2025-12-16",
+              "estimatedHours": "8",
+              "assigneeId": ""
+            },
+            {
+              "id": "314cbdd5-22eb-4582-b5b1-962300fbb330",
+              "createdAt": "2025-12-14T05:36:59.096Z",
+              "status": "completed",
+              "title": "Development",
+              "startDate": "2025-12-16",
+              "endDate": "2025-12-17",
+              "estimatedHours": "16",
+              "assigneeId": ""
+            },
+            {
+              "id": "93980c2a-9c89-46e1-92b9-06c5990315c9",
+              "createdAt": "2025-12-14T05:38:07.057Z",
+              "status": "in-progress",
+              "title": "Unit testing",
+              "startDate": "2025-12-18",
+              "endDate": "2025-12-18",
+              "estimatedHours": "8",
+              "assigneeId": ""
+            }
+          ],
+          "completedAt": null
+        },
+        {
+          "id": "4b3ae13a-24f9-4c14-96dd-011662807df5",
+          "createdAt": "2025-12-14T05:46:03.865Z",
+          "status": "completed",
+          "title": "UAT",
+          "description": "",
+          "dueDate": "2025-12-24",
+          "priority": "high",
+          "assigneeId": "5",
+          "tasks": [
+            {
+              "id": "8f6392a4-8fb3-4581-ac8f-c2c3bb05ac8d",
+              "createdAt": "2025-12-14T05:47:30.377Z",
+              "status": "in-progress",
+              "title": "UAT",
+              "startDate": "2025-12-22",
+              "endDate": "2025-12-24",
+              "estimatedHours": "24",
+              "assigneeId": "5"
+            }
+          ],
+          "completedAt": "2025-12-14T05:51:58.114Z"
+        }
+      ],
       "statusUpdates": [],
       "status": "active",
       "name": "project 1",
@@ -13,7 +103,8 @@
       "priority": "medium",
       "size": "m",
       "teamId": "team-a",
-      "color": "#ec4899"
+      "color": "#ec4899",
+      "portfolioIntake": "approved"
     },
     {
       "id": "1f0a5c40-6b8a-42a5-ba88-60d337c9e05c",
@@ -28,7 +119,8 @@
       "priority": "high",
       "size": "m",
       "teamId": "team-b",
-      "color": "#22c55e"
+      "color": "#22c55e",
+      "portfolioIntake": "approved"
     },
     {
       "id": "8e1b68ed-e1f0-45d9-aefc-850c8d17b74a",
@@ -43,7 +135,175 @@
       "priority": "medium",
       "size": "m",
       "teamId": "team-c",
-      "color": "#3b82f6"
+      "color": "#3b82f6",
+      "portfolioIntake": "approved"
+    },
+    {
+      "id": "5e214b98-fa58-4972-bc70-6fc5ab5bb2ef",
+      "createdAt": "2025-12-14T05:33:45.797Z",
+      "milestones": [],
+      "statusUpdates": [],
+      "status": "active",
+      "name": "Projec Y",
+      "description": "project Y",
+      "deliverables": "",
+      "dueDate": "2025-12-19",
+      "priority": "high",
+      "size": "m",
+      "teamId": "team-b",
+      "color": "#eab308",
+      "portfolioIntake": "approved"
+    },
+    {
+      "id": "430a8b4a-70fa-46e0-9fcd-0773978457e1",
+      "createdAt": "2025-12-14T20:36:27.185Z",
+      "milestones": [
+        {
+          "id": "7fc14c2a-f768-4810-b7b8-3c70424c1acd",
+          "createdAt": "2025-12-14T20:37:29.793Z",
+          "status": "completed",
+          "title": "BRD",
+          "description": "Requirements",
+          "dueDate": "2025-11-14",
+          "priority": "high",
+          "assigneeId": "4",
+          "tasks": [
+            {
+              "id": "690eaa0b-db92-4c81-98cc-d37a75189fe3",
+              "createdAt": "2025-12-14T20:38:06.066Z",
+              "status": "completed",
+              "title": "BRD",
+              "startDate": "2025-11-10",
+              "endDate": "2025-11-14",
+              "estimatedHours": "32",
+              "assigneeId": "4"
+            }
+          ],
+          "completedAt": "2025-12-14T20:42:21.007Z"
+        },
+        {
+          "id": "8a892c31-a58d-4c75-87d5-279308751737",
+          "createdAt": "2025-12-14T20:38:53.382Z",
+          "status": "completed",
+          "title": "Design",
+          "description": "mock ups + design",
+          "dueDate": "2025-11-21",
+          "priority": "high",
+          "assigneeId": "3",
+          "tasks": [
+            {
+              "id": "8aa17a4e-e9a0-4905-ab49-9e35fef8de92",
+              "createdAt": "2025-12-14T20:39:19.211Z",
+              "status": "completed",
+              "title": "mockups",
+              "startDate": "2025-11-17",
+              "endDate": "2025-11-21",
+              "estimatedHours": "32",
+              "assigneeId": "3"
+            }
+          ],
+          "completedAt": "2025-12-14T20:42:23.923Z"
+        },
+        {
+          "id": "3c1bb420-1026-48f6-84c6-5a683b8d7ea2",
+          "createdAt": "2025-12-14T20:39:49.507Z",
+          "status": "in-progress",
+          "title": "Development",
+          "description": "Dev + IT testing",
+          "dueDate": "2025-11-28",
+          "priority": "high",
+          "assigneeId": "1",
+          "tasks": [
+            {
+              "id": "f25b268f-3eb1-44c2-a72a-25b89e271916",
+              "createdAt": "2025-12-14T20:40:31.965Z",
+              "status": "completed",
+              "title": "Development",
+              "startDate": "2025-11-24",
+              "endDate": "2025-11-28",
+              "estimatedHours": "40",
+              "assigneeId": "5"
+            },
+            {
+              "id": "5bcc1c57-d3b6-44fa-89f5-ca90f47c5b16",
+              "createdAt": "2025-12-14T20:40:58.331Z",
+              "status": "in-progress",
+              "title": "IT testing",
+              "startDate": "2025-12-01",
+              "endDate": "2025-12-03",
+              "estimatedHours": "16",
+              "assigneeId": "5"
+            }
+          ],
+          "completedAt": null
+        },
+        {
+          "id": "6f3fa6e9-9d89-45c2-9db9-eaf45f56a402",
+          "createdAt": "2025-12-14T20:41:29.758Z",
+          "status": "in-progress",
+          "title": "UAT",
+          "description": "uat",
+          "dueDate": "2025-12-12",
+          "priority": "high",
+          "assigneeId": "2",
+          "tasks": [
+            {
+              "id": "f9bb1e7b-9191-4a11-84ee-567b945face9",
+              "createdAt": "2025-12-14T20:42:03.735Z",
+              "status": "in-progress",
+              "title": "UAT",
+              "startDate": "2025-12-08",
+              "endDate": "2025-12-12",
+              "estimatedHours": "40",
+              "assigneeId": "2"
+            }
+          ],
+          "completedAt": null
+        }
+      ],
+      "statusUpdates": [],
+      "status": "active",
+      "name": "SP site",
+      "description": "Build new SP site for IT",
+      "deliverables": "1. BRD\n2. IT website\n3. SOP",
+      "dueDate": "2025-12-19",
+      "priority": "critical",
+      "size": "m",
+      "teamId": "team-c",
+      "color": "#f43f5e",
+      "portfolioIntake": "approved"
+    },
+    {
+      "id": "90b8395b-c489-471c-a256-8610aee9f3a5",
+      "createdAt": "2025-12-15T05:45:44.410Z",
+      "milestones": [],
+      "statusUpdates": [],
+      "status": "active",
+      "name": "Test Project",
+      "description": "test",
+      "deliverables": "Test",
+      "dueDate": "",
+      "priority": "medium",
+      "size": "m",
+      "teamId": "team-a",
+      "color": "#f97316",
+      "portfolioIntake": "new"
+    },
+    {
+      "id": "d473e122-f550-4b23-a624-a6063cca499d",
+      "createdAt": "2025-12-15T05:48:03.260Z",
+      "milestones": [],
+      "statusUpdates": [],
+      "status": "active",
+      "name": "TEST again",
+      "description": "test",
+      "deliverables": "",
+      "dueDate": "",
+      "priority": "medium",
+      "size": "m",
+      "teamId": "",
+      "color": "#8b5cf6",
+      "portfolioIntake": "new"
     }
   ],
   "teams": [

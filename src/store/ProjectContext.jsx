@@ -161,6 +161,38 @@ export function ProjectProvider({ children }) {
         }));
         break;
       }
+      case 'ADD_TASK': {
+        const updated = await apiJson(`/projects/${action.projectId}/milestones/${action.milestoneId}/tasks`, {
+          method: 'POST',
+          body: JSON.stringify(action.task),
+        });
+        setState(prev => ({
+          ...prev,
+          projects: prev.projects.map(p => (p.id === action.projectId ? updated : p)),
+        }));
+        break;
+      }
+      case 'UPDATE_TASK': {
+        const updated = await apiJson(`/projects/${action.projectId}/milestones/${action.milestoneId}/tasks/${action.taskId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(action.updates),
+        });
+        setState(prev => ({
+          ...prev,
+          projects: prev.projects.map(p => (p.id === action.projectId ? updated : p)),
+        }));
+        break;
+      }
+      case 'DELETE_TASK': {
+        const updated = await apiJson(`/projects/${action.projectId}/milestones/${action.milestoneId}/tasks/${action.taskId}`, {
+          method: 'DELETE',
+        });
+        setState(prev => ({
+          ...prev,
+          projects: prev.projects.map(p => (p.id === action.projectId ? updated : p)),
+        }));
+        break;
+      }
       default:
         console.warn('Unknown action', action);
     }

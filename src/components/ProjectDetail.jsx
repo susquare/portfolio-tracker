@@ -18,13 +18,22 @@ import {
   FileText,
   BarChart3,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import { format, parseISO, isBefore } from 'date-fns';
 import GanttChart from './GanttChart';
 import StatusUpdates from './StatusUpdates';
+import { calculateMilestoneProgress, calculateProjectProgress } from '../utils/progress';
 
 const MILESTONE_STATUSES = [
+  { value: 'pending', label: 'Pending', icon: Clock, color: '#94a3b8' },
+  { value: 'in-progress', label: 'In Progress', icon: AlertCircle, color: '#f59e0b' },
+  { value: 'completed', label: 'Completed', icon: CheckCircle2, color: '#22c55e' },
+];
+
+const TASK_STATUSES = [
   { value: 'pending', label: 'Pending', icon: Clock, color: '#94a3b8' },
   { value: 'in-progress', label: 'In Progress', icon: AlertCircle, color: '#f59e0b' },
   { value: 'completed', label: 'Completed', icon: CheckCircle2, color: '#22c55e' },
@@ -68,6 +77,10 @@ export default function ProjectDetail({ projectId, onBack }) {
   const [menuOpen, setMenuOpen] = useState(null);
   const [editingProject, setEditingProject] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [taskMilestoneId, setTaskMilestoneId] = useState(null);
+  const [expandedMilestones, setExpandedMilestones] = useState({});
   
   if (!project) {
     return (
@@ -112,6 +125,31 @@ export default function ProjectDetail({ projectId, onBack }) {
     });
   };
   
+  const handleAddTask = (milestoneId, taskData) => {
+    dispatch({ type: 'ADD_TASK', projectId, milestoneId, task: taskData });
+    setShowTaskModal(false);
+    setTaskMilestoneId(null);
+  };
+  
+  const handleUpdateTask = (milestoneId, taskId, updates) => {
+    dispatch({ type: 'UPDATE_TASK', projectId, milestoneId, taskId, updates });
+    setEditingTask(null);
+    setTaskMilestoneId(null);
+  };
+  
+  const handleDeleteTask = (milestoneId, taskId) => {
+    if (confirm('Are you sure you want to delete this task?')) {
+      dispatch({ type: 'DELETE_TASK', projectId, milestoneId, taskId });
+    }
+  };
+  
+  const toggleMilestoneExpanded = (milestoneId) => {
+    setExpandedMilestones(prev => ({
+      ...prev,
+      [milestoneId]: !prev[milestoneId],
+    }));
+  };
+  
   const handleAddStatusUpdate = (update) => {
     dispatch({ type: 'ADD_STATUS_UPDATE', projectId, update });
   };
@@ -131,7 +169,8 @@ export default function ProjectDetail({ projectId, onBack }) {
   const overdueCount = milestones.filter(m => 
     m.status !== 'completed' && m.dueDate && isBefore(parseISO(m.dueDate), new Date())
   ).length;
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  // Calculate project progress based on total task effort across all milestones
+  const progress = calculateProjectProgress(project);
   
   const sortedMilestones = [...milestones].sort((a, b) => {
     const statusOrder = { 'in-progress': 0, 'pending': 1, 'completed': 2 };
@@ -168,8 +207,10 @@ export default function ProjectDetail({ projectId, onBack }) {
             )}
             
             <div className="project-meta">
-              <span className={`status-badge large ${project.status}`}>
-                {project.status}
+              <span className={`status-badge large intake-${project.portfolioIntake || 'new'}`}>
+                {project.portfolioIntake === 'new' ? 'New' :
+                 project.portfolioIntake === 'in-review' ? 'In Review' :
+                 project.portfolioIntake === 'approved' ? 'Approved' : 'New'}
               </span>
               
               {priorityConfig && (
@@ -418,9 +459,16 @@ export default function ProjectDetail({ projectId, onBack }) {
                     
                     <div className="milestone-content">
                       <div className="milestone-header">
-                        <h4 className={milestone.status === 'completed' ? 'completed' : ''}>
-                          {milestone.title}
-                        </h4>
+                        <div className="milestone-title-section">
+                          <h4 className={milestone.status === 'completed' ? 'completed' : ''}>
+                            {milestone.title}
+                          </h4>
+                          {milestone.tasks && milestone.tasks.length > 0 && (
+                            <span className="milestone-progress-badge">
+                              {calculateMilestoneProgress(milestone)}%
+                            </span>
+                          )}
+                        </div>
                         <div className="milestone-menu" onClick={(e) => e.stopPropagation()}>
                           <button 
                             className="menu-trigger"
@@ -480,6 +528,131 @@ export default function ProjectDetail({ projectId, onBack }) {
                           </span>
                         )}
                       </div>
+                      
+                      {/* Task Progress */}
+                      {milestone.tasks && milestone.tasks.length > 0 && (
+                        <div className="milestone-progress-section">
+                          <div className="progress-header">
+                            <span>Task Progress</span>
+                            <span>{calculateMilestoneProgress(milestone)}%</span>
+                          </div>
+                          <div className="progress-bar">
+                            <div 
+                              className="progress-fill" 
+                              style={{ width: `${calculateMilestoneProgress(milestone)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Tasks Section */}
+                      <div className="milestone-tasks-section">
+                        <div className="tasks-header">
+                          <button
+                            className="tasks-toggle"
+                            onClick={() => toggleMilestoneExpanded(milestone.id)}
+                          >
+                            <Target size={14} />
+                            <span>Tasks ({milestone.tasks?.length || 0})</span>
+                            {expandedMilestones[milestone.id] ? (
+                              <ChevronDown size={14} />
+                            ) : (
+                              <ChevronRight size={14} />
+                            )}
+                          </button>
+                          <button
+                            className="add-task-btn"
+                            onClick={() => {
+                              setTaskMilestoneId(milestone.id);
+                              setShowTaskModal(true);
+                            }}
+                            title="Add Task"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        
+                        {expandedMilestones[milestone.id] && (
+                          <div className="tasks-list">
+                            {milestone.tasks && milestone.tasks.length > 0 ? (
+                              milestone.tasks.map(task => {
+                                const taskAssignee = teamMembers.find(m => m.id === task.assigneeId);
+                                const TaskStatusIcon = TASK_STATUSES.find(s => s.value === task.status)?.icon || Clock;
+                                const taskIsOverdue = task.endDate && 
+                                  task.status !== 'completed' && 
+                                  isBefore(parseISO(task.endDate), new Date());
+                                
+                                return (
+                                  <div 
+                                    key={task.id} 
+                                    className={`task-item ${task.status} ${taskIsOverdue ? 'overdue' : ''}`}
+                                  >
+                                    <div className="task-status-icon">
+                                      <TaskStatusIcon 
+                                        size={16} 
+                                        style={{ color: TASK_STATUSES.find(s => s.value === task.status)?.color }}
+                                      />
+                                    </div>
+                                    <div className="task-content">
+                                      <div className="task-header">
+                                        <span className="task-title">{task.title}</span>
+                                        <div className="task-actions">
+                                          <button
+                                            className="task-edit-btn"
+                                            onClick={() => {
+                                              setEditingTask(task);
+                                              setTaskMilestoneId(milestone.id);
+                                              setShowTaskModal(true);
+                                            }}
+                                          >
+                                            <Edit3 size={12} />
+                                          </button>
+                                          <button
+                                            className="task-delete-btn"
+                                            onClick={() => handleDeleteTask(milestone.id, task.id)}
+                                          >
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="task-meta">
+                                        {task.startDate && task.endDate && (
+                                          <span className="task-dates">
+                                            <Calendar size={12} />
+                                            {format(parseISO(task.startDate), 'MMM d')} - {format(parseISO(task.endDate), 'MMM d')}
+                                          </span>
+                                        )}
+                                        {task.estimatedHours && (
+                                          <span className="task-hours">
+                                            {task.estimatedHours}h
+                                          </span>
+                                        )}
+                                        {taskAssignee && (
+                                          <span className="task-assignee">
+                                            <span className="assignee-avatar">{taskAssignee.avatar}</span>
+                                            {taskAssignee.name}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <select
+                                      className="task-status-select"
+                                      value={task.status}
+                                      onChange={(e) => handleUpdateTask(milestone.id, task.id, { status: e.target.value })}
+                                    >
+                                      {TASK_STATUSES.map(s => (
+                                        <option key={s.value} value={s.value}>{s.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="tasks-empty">No tasks yet. Add your first task!</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="milestone-status-select">
@@ -521,6 +694,22 @@ export default function ProjectDetail({ projectId, onBack }) {
           onClose={() => {
             setShowMilestoneModal(false);
             setEditingMilestone(null);
+          }}
+        />
+      )}
+      
+      {(showTaskModal || editingTask) && taskMilestoneId && (
+        <TaskModal
+          task={editingTask}
+          teamMembers={teamMembers}
+          onSave={editingTask 
+            ? (data) => handleUpdateTask(taskMilestoneId, editingTask.id, data)
+            : (data) => handleAddTask(taskMilestoneId, data)
+          }
+          onClose={() => {
+            setShowTaskModal(false);
+            setEditingTask(null);
+            setTaskMilestoneId(null);
           }}
         />
       )}
@@ -654,7 +843,7 @@ function ProjectModal({ project, teams, onSave, onClose }) {
     size: project?.size || 'm',
     teamId: project?.teamId || '',
     color: project?.color || '#6366f1',
-    status: project?.status || 'active',
+    portfolioIntake: project?.portfolioIntake || 'new',
   });
   
   const handleSubmit = (e) => {
@@ -793,6 +982,112 @@ function ProjectModal({ project, teams, onSave, onClose }) {
             </button>
             <button type="submit" className="primary-btn">
               {project ? 'Update' : 'Create'} Project
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TaskModal({ task, teamMembers, onSave, onClose }) {
+  const [formData, setFormData] = useState({
+    title: task?.title || '',
+    startDate: task?.startDate || '',
+    endDate: task?.endDate || '',
+    estimatedHours: task?.estimatedHours || '',
+    assigneeId: task?.assigneeId || '',
+    status: task?.status || 'pending',
+  });
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.title.trim()) return;
+    onSave(formData);
+  };
+  
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h2>{task ? 'Edit Task' : 'New Task'}</h2>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Task Title *</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="Task title"
+              autoFocus
+            />
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Start Date</label>
+              <input
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>End Date</label>
+              <input
+                type="date"
+                value={formData.endDate}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+              />
+            </div>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Estimated Hours</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={formData.estimatedHours}
+                onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
+                placeholder="e.g., 8"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              >
+                {TASK_STATUSES.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label>Assigned To</label>
+            <select
+              value={formData.assigneeId}
+              onChange={(e) => setFormData({ ...formData, assigneeId: e.target.value })}
+            >
+              <option value="">Unassigned</option>
+              {teamMembers.map(m => (
+                <option key={m.id} value={m.id}>{m.avatar} {m.name}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="modal-actions">
+            <button type="button" className="secondary-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="primary-btn">
+              {task ? 'Update' : 'Create'} Task
             </button>
           </div>
         </form>

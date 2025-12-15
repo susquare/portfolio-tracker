@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, FolderKanban, Plus, LayoutGrid, Sun, Moon, ChevronRight, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Plus, LayoutGrid, GitBranch, Sun, Moon, ChevronRight, ChevronDown } from 'lucide-react';
 import { useTheme } from '../store/ThemeContext';
 import { useProjects } from '../store/ProjectContext';
 
@@ -83,6 +83,14 @@ export default function Sidebar({ currentView, selectedProjectId, onNavigate, on
         >
           <LayoutGrid size={20} />
           <span>Portfolio</span>
+        </button>
+        
+        <button
+          className={`nav-item ${currentView === 'pipeline' ? 'active' : ''}`}
+          onClick={() => onNavigate('pipeline')}
+        >
+          <GitBranch size={20} />
+          <span>Project Pipeline</span>
         </button>
         
         <div className="nav-group">

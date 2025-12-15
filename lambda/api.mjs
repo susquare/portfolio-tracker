@@ -28,8 +28,9 @@ const json = (statusCode, body) => ({
   headers: {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,PATCH,DELETE',
+    'Access-Control-Allow-Headers':
+      'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
   },
   body: JSON.stringify(body),
 });
@@ -63,10 +64,6 @@ async function writeDB(data) {
 const findProject = (db, id) => db.projects.find(p => p.id === id);
 
 export const handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return json(200, { ok: true });
-  }
-
   if (!BUCKET) {
     return json(500, { error: 'Missing S3_BUCKET env var' });
   }
@@ -84,6 +81,11 @@ export const handler = async (event) => {
     event?.requestContext?.http?.method ||
     event?.requestContext?.httpMethod ||
     '';
+
+  // Short-circuit preflight
+  if (method === 'OPTIONS') {
+    return json(200, { ok: true });
+  }
   let segments = rawPath.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
   // Prefer explicit /api, but fall back to no-prefix paths
   const apiIndex = segments.indexOf('api');
@@ -186,6 +188,47 @@ export const handler = async (event) => {
           if (project.milestones.length === before) return json(404, { error: 'Milestone not found' });
           await writeDB(db);
           return json(200, project);
+        }
+
+        // Tasks under milestone
+        if (afterProjects[3] === 'tasks') {
+          project.milestones = project.milestones || [];
+          const milestone = project.milestones.find(x => x.id === milestoneId);
+          if (!milestone) return json(404, { error: 'Milestone not found' });
+          milestone.tasks = milestone.tasks || [];
+
+          // POST /api/projects/:id/milestones/:mid/tasks
+          if (afterProjects.length === 4 && method === 'POST') {
+            const task = {
+              id: randomUUID(),
+              createdAt: new Date().toISOString(),
+              status: 'pending',
+              ...body,
+            };
+            milestone.tasks.push(task);
+            await writeDB(db);
+            return json(201, project);
+          }
+
+          const taskId = afterProjects[4];
+
+          // PATCH /api/projects/:id/milestones/:mid/tasks/:tid
+          if (afterProjects.length === 5 && method === 'PATCH') {
+            const task = milestone.tasks.find(x => x.id === taskId);
+            if (!task) return json(404, { error: 'Task not found' });
+            Object.assign(task, body);
+            await writeDB(db);
+            return json(200, project);
+          }
+
+          // DELETE /api/projects/:id/milestones/:mid/tasks/:tid
+          if (afterProjects.length === 5 && method === 'DELETE') {
+            const before = milestone.tasks.length;
+            milestone.tasks = milestone.tasks.filter(x => x.id !== taskId);
+            if (milestone.tasks.length === before) return json(404, { error: 'Task not found' });
+            await writeDB(db);
+            return json(200, project);
+          }
         }
       }
 

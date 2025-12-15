@@ -133,6 +133,56 @@ app.delete('/api/projects/:id/milestones/:mid', async (req, res) => {
   res.json(project);
 });
 
+// Tasks
+app.post('/api/projects/:id/milestones/:mid/tasks', async (req, res) => {
+  const db = await readDB();
+  const project = findProject(db, req.params.id);
+  if (!project) return res.status(404).send('Project not found');
+  project.milestones = project.milestones || [];
+  const milestone = project.milestones.find(m => m.id === req.params.mid);
+  if (!milestone) return res.status(404).send('Milestone not found');
+  const task = {
+    id: randomUUID(),
+    createdAt: new Date().toISOString(),
+    status: 'pending',
+    ...req.body,
+  };
+  milestone.tasks = milestone.tasks || [];
+  milestone.tasks.push(task);
+  await writeDB(db);
+  res.status(201).json(project);
+});
+
+app.patch('/api/projects/:id/milestones/:mid/tasks/:tid', async (req, res) => {
+  const db = await readDB();
+  const project = findProject(db, req.params.id);
+  if (!project) return res.status(404).send('Project not found');
+  project.milestones = project.milestones || [];
+  const milestone = project.milestones.find(m => m.id === req.params.mid);
+  if (!milestone) return res.status(404).send('Milestone not found');
+  milestone.tasks = milestone.tasks || [];
+  const task = milestone.tasks.find(t => t.id === req.params.tid);
+  if (!task) return res.status(404).send('Task not found');
+  Object.assign(task, req.body);
+  await writeDB(db);
+  res.json(project);
+});
+
+app.delete('/api/projects/:id/milestones/:mid/tasks/:tid', async (req, res) => {
+  const db = await readDB();
+  const project = findProject(db, req.params.id);
+  if (!project) return res.status(404).send('Project not found');
+  project.milestones = project.milestones || [];
+  const milestone = project.milestones.find(m => m.id === req.params.mid);
+  if (!milestone) return res.status(404).send('Milestone not found');
+  milestone.tasks = milestone.tasks || [];
+  const before = milestone.tasks.length;
+  milestone.tasks = milestone.tasks.filter(t => t.id !== req.params.tid);
+  if (milestone.tasks.length === before) return res.status(404).send('Task not found');
+  await writeDB(db);
+  res.json(project);
+});
+
 // Status updates
 app.post('/api/projects/:id/status-updates', async (req, res) => {
   const db = await readDB();

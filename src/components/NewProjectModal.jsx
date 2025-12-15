@@ -36,7 +36,7 @@ export default function NewProjectModal({ onClose, onSuccess }) {
     size: 'm',
     teamId: '',
     color: PROJECT_COLORS[Math.floor(Math.random() * PROJECT_COLORS.length)],
-    status: 'active',
+    portfolioIntake: 'new',
   });
   
   const handleSubmit = (e) => {
@@ -169,6 +169,18 @@ export default function NewProjectModal({ onClose, onSuccess }) {
           
           {showAdvanced && (
             <div className="form-section">
+              <div className="form-group">
+                <label>Portfolio Intake</label>
+                <select
+                  value={formData.portfolioIntake}
+                  onChange={(e) => setFormData({ ...formData, portfolioIntake: e.target.value })}
+                >
+                  <option value="new">New</option>
+                  <option value="in-review">In Review</option>
+                  <option value="approved">Approved</option>
+                </select>
+              </div>
+              
               <div className="form-group">
                 <label>Project Color</label>
                 <div className="color-picker">

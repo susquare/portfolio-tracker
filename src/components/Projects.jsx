@@ -10,6 +10,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { calculateProjectProgress } from '../utils/progress';
 
 const PROJECT_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', 
@@ -25,7 +26,7 @@ export default function Projects({ onNavigate, showNewProjectModal }) {
   
   const filteredProjects = projects.filter(p => {
     if (filter === 'all') return true;
-    return p.status === filter;
+    return p.portfolioIntake === filter;
   });
   
   const handleDelete = (id) => {
@@ -56,22 +57,22 @@ export default function Projects({ onNavigate, showNewProjectModal }) {
           All ({projects.length})
         </button>
         <button 
-          className={`filter-btn ${filter === 'active' ? 'active' : ''}`}
-          onClick={() => setFilter('active')}
+          className={`filter-btn ${filter === 'new' ? 'active' : ''}`}
+          onClick={() => setFilter('new')}
         >
-          Active ({projects.filter(p => p.status === 'active').length})
+          New ({projects.filter(p => p.portfolioIntake === 'new').length})
         </button>
         <button 
-          className={`filter-btn ${filter === 'on-hold' ? 'active' : ''}`}
-          onClick={() => setFilter('on-hold')}
+          className={`filter-btn ${filter === 'in-review' ? 'active' : ''}`}
+          onClick={() => setFilter('in-review')}
         >
-          On Hold ({projects.filter(p => p.status === 'on-hold').length})
+          In Review ({projects.filter(p => p.portfolioIntake === 'in-review').length})
         </button>
         <button 
-          className={`filter-btn ${filter === 'completed' ? 'active' : ''}`}
-          onClick={() => setFilter('completed')}
+          className={`filter-btn ${filter === 'approved' ? 'active' : ''}`}
+          onClick={() => setFilter('approved')}
         >
-          Completed ({projects.filter(p => p.status === 'completed').length})
+          Approved ({projects.filter(p => p.portfolioIntake === 'approved').length})
         </button>
       </div>
       
@@ -88,9 +89,8 @@ export default function Projects({ onNavigate, showNewProjectModal }) {
       ) : (
         <div className="projects-grid">
           {filteredProjects.map(project => {
-            const completedMilestones = project.milestones?.filter(m => m.status === 'completed').length || 0;
-            const totalMilestones = project.milestones?.length || 0;
-            const progress = totalMilestones > 0 ? (completedMilestones / totalMilestones) * 100 : 0;
+            const progress = calculateProjectProgress(project);
+            const totalMilestones = (project.milestones || []).length;
             
             return (
               <div 
@@ -157,8 +157,10 @@ export default function Projects({ onNavigate, showNewProjectModal }) {
                 </div>
                 
                 <div className="project-card-footer">
-                  <span className={`status-badge ${project.status}`}>
-                    {project.status}
+                  <span className={`status-badge intake-${project.portfolioIntake || 'new'}`}>
+                    {project.portfolioIntake === 'new' ? 'New' :
+                     project.portfolioIntake === 'in-review' ? 'In Review' :
+                     project.portfolioIntake === 'approved' ? 'Approved' : 'New'}
                   </span>
                   <ChevronRight size={18} className="chevron" />
                 </div>
