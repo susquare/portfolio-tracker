@@ -37,7 +37,11 @@ const PORTFOLIO_INTAKE_CONFIG = {
 };
 
 export default function ProjectPipeline({ onNavigate }) {
-  const { projects, teams = [], teamMembers = [] } = useProjects();
+  const contextData = useProjects();
+  const projects = contextData?.projects || [];
+  const teams = contextData?.teams || [];
+  const teamMembers = contextData?.teamMembers || [];
+  const loading = contextData?.loading || false;
   const dispatch = useProjectDispatch();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState('name');
@@ -67,7 +71,11 @@ export default function ProjectPipeline({ onNavigate }) {
   };
   
   // Filter to show only non-approved projects
-  const pipelineProjects = (projects || []).filter(p => p.portfolioIntake !== 'approved');
+  // Handle projects that might not have portfolioIntake set (default to 'new')
+  const pipelineProjects = (projects || []).filter(p => {
+    const intake = p.portfolioIntake || 'new';
+    return intake !== 'approved';
+  });
   
   const handleSort = (field) => {
     if (sortField === field) {
@@ -85,7 +93,8 @@ export default function ProjectPipeline({ onNavigate }) {
         project.deliverables?.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesPriority = filterPriority === 'all' || project.priority === filterPriority;
-      const matchesIntake = filterIntake === 'all' || project.portfolioIntake === filterIntake;
+      const projectIntake = project.portfolioIntake || 'new';
+      const matchesIntake = filterIntake === 'all' || projectIntake === filterIntake;
       const matchesTeam = filterTeam === 'all' || project.teamId === filterTeam;
       
       return matchesSearch && matchesPriority && matchesIntake && matchesTeam;
@@ -108,7 +117,9 @@ export default function ProjectPipeline({ onNavigate }) {
           break;
         case 'portfolioIntake':
           const intakeOrder = { 'new': 0, 'in-review': 1, 'approved': 2 };
-          comparison = (intakeOrder[a.portfolioIntake] ?? 99) - (intakeOrder[b.portfolioIntake] ?? 99);
+          const aIntake = a.portfolioIntake || 'new';
+          const bIntake = b.portfolioIntake || 'new';
+          comparison = (intakeOrder[aIntake] ?? 99) - (intakeOrder[bIntake] ?? 99);
           break;
         default:
           comparison = 0;
@@ -123,6 +134,19 @@ export default function ProjectPipeline({ onNavigate }) {
       <ChevronUp size={14} className="sort-icon" /> : 
       <ChevronDown size={14} className="sort-icon" />;
   };
+
+  if (loading) {
+    return (
+      <div className="portfolio-page">
+        <header className="page-header">
+          <div>
+            <h1>Project Pipeline</h1>
+            <p className="subtitle">Loading...</p>
+          </div>
+        </header>
+      </div>
+    );
+  }
 
   return (
     <div className="portfolio-page">
@@ -214,10 +238,19 @@ export default function ProjectPipeline({ onNavigate }) {
               {filteredAndSortedProjects.map(project => {
                 const projectTeam = teams.find(t => t.id === project.teamId);
                 const teamLead = teamMembers.find(m => m.id === project.teamLeadId);
-                const intakeConfig = PORTFOLIO_INTAKE_CONFIG[project.portfolioIntake] || PORTFOLIO_INTAKE_CONFIG.new;
-                const isOverdue = project.dueDate && isBefore(parseISO(project.dueDate), new Date());
-                const priorityConfig = PRIORITY_CONFIG[project.priority];
-                const sizeConfig = SIZE_CONFIG[project.size];
+                const projectIntake = project.portfolioIntake || 'new';
+                const intakeConfig = PORTFOLIO_INTAKE_CONFIG[projectIntake] || PORTFOLIO_INTAKE_CONFIG.new;
+                let isOverdue = false;
+                try {
+                  if (project.dueDate) {
+                    isOverdue = isBefore(parseISO(project.dueDate), new Date());
+                  }
+                } catch (e) {
+                  // Invalid date, skip overdue check
+                  console.warn('Invalid due date for project:', project.id, project.dueDate);
+                }
+                const priorityConfig = PRIORITY_CONFIG[project.priority] || PRIORITY_CONFIG.medium;
+                const sizeConfig = SIZE_CONFIG[project.size] || SIZE_CONFIG.m;
                 
                 return (
                   <tr 
@@ -237,7 +270,7 @@ export default function ProjectPipeline({ onNavigate }) {
                     <td onClick={(e) => e.stopPropagation()}>
                       <select
                         className="intake-status-select"
-                        value={project.portfolioIntake || 'new'}
+                        value={projectIntake}
                         onChange={(e) => handleIntakeStatusChange(project.id, e.target.value, e)}
                         style={{
                           backgroundColor: `${intakeConfig.color}20`,
@@ -268,12 +301,18 @@ export default function ProjectPipeline({ onNavigate }) {
                       </span>
                     </td>
                     <td>
-                      {project.dueDate ? (
-                        <span className={isOverdue ? 'overdue-date' : ''}>
-                          <Calendar size={14} />
-                          {format(parseISO(project.dueDate), 'MMM d, yyyy')}
-                        </span>
-                      ) : (
+                      {project.dueDate ? (() => {
+                        try {
+                          return (
+                            <span className={isOverdue ? 'overdue-date' : ''}>
+                              <Calendar size={14} />
+                              {format(parseISO(project.dueDate), 'MMM d, yyyy')}
+                            </span>
+                          );
+                        } catch (e) {
+                          return <span className="no-date">Invalid date</span>;
+                        }
+                      })() : (
                         <span className="no-date">No date</span>
                       )}
                     </td>
