@@ -57,6 +57,13 @@ const findProject = (db, id) => db.projects.find(p => p.id === id);
 // Routes
 app.get('/api/state', async (_req, res) => {
   const db = await readDB();
+  // Normalize legacy records
+  db.projects = db.projects.map(p => ({
+    portfolioIntake: 'new',
+    ...p,
+    portfolioIntake: p.portfolioIntake || 'new',
+  }));
+  await writeDB(db);
   res.json(db);
 });
 
@@ -68,6 +75,7 @@ app.post('/api/projects', async (req, res) => {
     milestones: [],
     statusUpdates: [],
     status: 'active',
+    portfolioIntake: req.body?.portfolioIntake || 'new',
     ...req.body,
   };
   db.projects.push(project);

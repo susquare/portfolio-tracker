@@ -106,6 +106,13 @@ export const handler = async (event) => {
     // GET /api/state or /state (fallback: last segment == state)
     if (method === 'GET' && segments.length && segments[segments.length - 1] === 'state') {
       const db = await readDB();
+      // Ensure portfolioIntake exists for older records
+      db.projects = db.projects.map(p => ({
+        portfolioIntake: 'new',
+        ...p,
+        portfolioIntake: p.portfolioIntake || 'new',
+      }));
+      await writeDB(db);
       return json(200, db);
     }
 
@@ -123,6 +130,7 @@ export const handler = async (event) => {
           milestones: [],
           statusUpdates: [],
           status: 'active',
+          portfolioIntake: body?.portfolioIntake || 'new',
           ...body,
         };
         db.projects.push(project);
